@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIと創る文明 Ver.0.6</title>
+
+<style>
+body{
+ margin:0;
+ font-family:sans-serif;
+ background:#0e1117;
+ color:#fff;
+}
+
+#app{
+ display:grid;
+ grid-template-columns:1.2fr 1fr;
+ gap:15px;
+ padding:20px;
+}
+
+.panel{
+ background:#171b24;
+ padding:15px;
+ border-radius:15px;
+}
+
+.resources{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:10px;
+}
+
+.resource{
+ background:#222838;
+ padding:10px;
+ border-radius:10px;
+}
+
+.value{
+ font-size:22px;
+ font-weight:bold;
+}
+
+button{
+ width:100%;
+ margin-top:10px;
+ padding:12px;
+ border:none;
+ border-radius:10px;
+ font-weight:bold;
+}
+
+.main{background:#4f8cff;}
+.sub{background:#3a6fd8;}
+.warn{background:#d73a49;}
+.reward{background:#f0ad4e;}
+
+.log{
+ height:150px;
+ overflow-y:auto;
+ background:#0f131b;
+ padding:10px;
+ border-radius:10px;
+}
+
+.progress{
+ height:16px;
+ background:#111;
+ border-radius:10px;
+ margin-top:5px;
+ overflow:hidden;
+}
+
+.bar{
+ height:100%;
+ background:#4f8cff;
+ width:0%;
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+<!-- 左 -->
+<div class="panel">
+
+<h2>資源</h2>
+
+<div class="resources">
+<div class="resource">食料<div class="value" id="food">0</div></div>
+<div class="resource">木材<div class="value" id="wood">0</div></div>
+<div class="resource">石材<div class="value" id="stone">0</div></div>
+<div class="resource">人口<div class="value" id="population">1</div></div>
+</div>
+
+<button id="gather" class="main">採集</button>
+<button id="farm" class="sub">農場</button>
+<button id="lumber" class="sub">伐採所</button>
+<button id="quarry" class="sub">採石場</button>
+
+<button id="evolve" class="main">文明進化</button>
+<button id="rebirth" class="warn">転生（倍率UP）</button>
+
+<h3>広告</h3>
+<button id="reward" class="reward">報酬（大量資源）</button>
+
+</div>
+
+<!-- 右 -->
+<div class="panel">
+
+<h2>文明</h2>
+<div id="era">石器時代</div>
+
+<div class="progress">
+<div class="bar" id="bar"></div>
+</div>
+
+<div id="progressText"></div>
+
+<h3>ミッション</h3>
+<div id="mission"></div>
+
+<h3>AI</h3>
+<div id="ai"></div>
+
+<h3>ログ</h3>
+<div class="log" id="log"></div>
+
+</div>
+
+</div>
+
+<script>
+const SAVE_KEY="ai_civ_v06";
+
+const state={
+ food:0,wood:0,stone:0,population:1,
+ farms:0,lumber:0,quarry:0,
+ era:0,rebirth:0,bonus:1,
+ mission:{type:"food",target:100,progress:0}
+};
+
+const eras=["石器","農耕","青銅","鉄","中世","産業","情報","AI"];
+
+function f(n){
+ if(n>=1e6)return (n/1e6).toFixed(1)+"M";
+ if(n>=1e3)return (n/1e3).toFixed(1)+"K";
+ return Math.floor(n);
+}
+
+function logAdd(t){
+ log.innerHTML=t+"<br>"+log.innerHTML;
+}
+
+function newMission(){
+ const types=["food","wood","stone"];
+ const t=types[Math.floor(Math.random()*3)];
+ const target=100+state.rebirth*50;
+ state.mission={type:t,target:target,progress:0};
+}
+
+function update(){
+ food.textContent=f(state.food);
+ wood.textContent=f(state.wood);
+ stone.textContent=f(state.stone);
+ population.textContent=f(state.population);
+
+ era.textContent=eras[state.era];
+
+ let p=Math.min(100,state.food/100*100);
+ bar.style.width=p+"%";
+ progressText.textContent="進化進行度 "+p.toFixed(0)+"%";
+
+ mission.textContent=
+  state.mission.type+" "+Math.floor(state.mission.progress)+"/"+state.mission.target;
+
+ ai.textContent="採集→強化→進化→転生が基本ループ";
+
+}
+
+function gain(type,val){
+ state[type]+=val;
+
+ if(state.mission.type===type){
+  state.mission.progress+=val;
+
+  if(state.mission.progress>=state.mission.target){
+   state.food+=50;
+   logAdd("ミッション達成！");
+   newMission();
+  }
+ }
+}
+
+gather.onclick=()=>{
+ gain("food",3*state.bonus);
+ gain("wood",2*state.bonus);
+ gain("stone",1*state.bonus);
+ update();
+};
+
+farm.onclick=()=>{
+ if(state.food>=20){
+  state.food-=20;
+  state.farms++;
+  update();
+ }
+};
+
+lumber.onclick=()=>{
+ if(state.wood>=20){
+  state.wood-=20;
+  state.lumber++;
+  update();
+ }
+};
+
+quarry.onclick=()=>{
+ if(state.stone>=20){
+  state.stone-=20;
+  state.quarry++;
+  update();
+ }
+};
+
+evolve.onclick=()=>{
+ if(state.food>=100){
+  state.era++;
+  logAdd("文明進化！");
+  update();
+ }
+};
+
+rebirth.onclick=()=>{
+ if(state.era<2)return;
+
+ state.rebirth++;
+ state.bonus=1+state.rebirth*0.5;
+
+ state.food=0;
+ state.wood=0;
+ state.stone=0;
+ state.farms=0;
+ state.lumber=0;
+ state.quarry=0;
+ state.era=0;
+
+ logAdd("転生成功！倍率UP");
+ update();
+};
+
+reward.onclick=()=>{
+ state.food+=100*state.bonus;
+ logAdd("広告報酬GET");
+ update();
+};
+
+function loop(){
+ gain("food",state.farms*0.1*state.bonus);
+ gain("wood",state.lumber*0.1*state.bonus);
+ gain("stone",state.quarry*0.1*state.bonus);
+ update();
+}
+
+function save(){
+ localStorage.setItem(SAVE_KEY,JSON.stringify(state));
+}
+
+function load(){
+ const d=localStorage.getItem(SAVE_KEY);
+ if(d) Object.assign(state,JSON.parse(d));
+}
+
+load();
+newMission();
+update();
+
+setInterval(loop,100);
+setInterval(save,5000);
+</script>
+
+</body>
+</html>
