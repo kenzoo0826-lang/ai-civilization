@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AIと創る文明 Ver.0.7</title>
+<title>AIと創る文明 Ver.0.9</title>
 
 <style>
-*{
- box-sizing:border-box;
-}
+*{box-sizing:border-box;}
 
 html,body{
  margin:0;
@@ -18,9 +16,6 @@ html,body{
  touch-action:manipulation;
  -webkit-text-size-adjust:100%;
  overscroll-behavior:none;
-}
-
-body{
  user-select:none;
 }
 
@@ -29,7 +24,7 @@ body{
  display:grid;
  grid-template-columns:1.2fr 1fr;
  gap:16px;
- padding:18px;
+ padding:16px;
 }
 
 .panel{
@@ -40,9 +35,7 @@ body{
  box-shadow:0 10px 28px rgba(0,0,0,.28);
 }
 
-h1,h2,h3{
- margin-top:0;
-}
+h1,h2,h3{margin-top:0;}
 
 .subtitle{
  color:#aab3c5;
@@ -79,7 +72,7 @@ button{
  padding:14px;
  border:none;
  border-radius:14px;
- color:white;
+ color:#fff;
  font-weight:900;
  font-size:15px;
  cursor:pointer;
@@ -88,31 +81,17 @@ button{
  user-select:none;
 }
 
-button:active{
- transform:scale(.98);
-}
+button:active{transform:scale(.98);}
 
 button:disabled{
  background:#3a3f4b!important;
  color:#8d94a3;
 }
 
-.main{
- background:linear-gradient(135deg,#4f8cff,#6d5dfc);
-}
-
-.sub{
- background:linear-gradient(135deg,#2f81f7,#4f8cff);
-}
-
-.warn{
- background:linear-gradient(135deg,#d73a49,#ff7b72);
-}
-
-.reward{
- background:linear-gradient(135deg,#f0ad4e,#ffcf66);
- color:#1b1300;
-}
+.main{background:linear-gradient(135deg,#4f8cff,#6d5dfc);}
+.sub{background:linear-gradient(135deg,#2f81f7,#4f8cff);}
+.warn{background:linear-gradient(135deg,#d73a49,#ff7b72);}
+.reward{background:linear-gradient(135deg,#f0ad4e,#ffcf66);color:#1b1300;}
 
 .info-box{
  background:#101620;
@@ -138,6 +117,33 @@ button:disabled{
  transition:width .2s;
 }
 
+.mission-card{
+ background:#131a26;
+ border:1px solid #33415a;
+ border-radius:14px;
+ padding:14px;
+ margin-top:10px;
+}
+
+.mission-title{
+ font-size:17px;
+ font-weight:900;
+ color:#8be9fd;
+}
+
+.mission-reward{
+ color:#ffcf66;
+ font-weight:900;
+ margin-top:6px;
+}
+
+.ai{
+ border-left:4px solid #4f8cff;
+ padding-left:12px;
+ line-height:1.7;
+ color:#dce7ff;
+}
+
 .log{
  height:150px;
  overflow-y:auto;
@@ -149,26 +155,28 @@ button:disabled{
  font-size:14px;
 }
 
-.ai{
- border-left:4px solid #4f8cff;
- padding-left:12px;
- line-height:1.7;
- color:#dce7ff;
-}
-
-.mission{
- font-weight:900;
+.popup{
+ position:absolute;
  color:#8be9fd;
-}
-
-.combo{
- color:#ffcf66;
  font-weight:900;
+ pointer-events:none;
+ animation:pop .8s forwards;
+ z-index:999;
 }
 
-.small{
- color:#aab3c5;
- font-size:13px;
+@keyframes pop{
+ 0%{transform:translateY(0);opacity:1;}
+ 100%{transform:translateY(-42px);opacity:0;}
+}
+
+.blink{
+ animation:blink 1s infinite;
+}
+
+@keyframes blink{
+ 0%{filter:brightness(1);}
+ 50%{filter:brightness(1.55);}
+ 100%{filter:brightness(1);}
 }
 
 .flash{
@@ -186,9 +194,7 @@ button:disabled{
   padding:12px;
  }
 
- .value{
-  font-size:24px;
- }
+ .value{font-size:24px;}
 
  button{
   font-size:16px;
@@ -231,7 +237,7 @@ button:disabled{
 <div class="info-box">
  <div>現在：<strong id="era">石器時代</strong></div>
  <div class="progress"><div class="bar" id="bar"></div></div>
- <div class="small" id="progressText">進化進行度 0%</div>
+ <div id="progressText">進化進行度 0%</div>
 </div>
 
 <div class="info-box">
@@ -244,14 +250,7 @@ button:disabled{
 
 <div class="info-box">
  <h3>ミッション</h3>
- <div class="mission" id="mission">---</div>
- <div class="small">達成すると資源ボーナス獲得</div>
-</div>
-
-<div class="info-box">
- <h3>連続採集</h3>
- <div class="combo" id="combo">コンボ 0</div>
- <div class="small">連打すると採集量が少し増えます</div>
+ <div id="missionArea"></div>
 </div>
 
 <h3>AIアドバイス</h3>
@@ -267,7 +266,7 @@ button:disabled{
 </div>
 
 <script>
-const SAVE_KEY = "ai_civ_v07";
+const SAVE_KEY = "ai_civ_v09";
 
 const state = {
  food:0,
@@ -283,7 +282,7 @@ const state = {
  boostTime:0,
  combo:0,
  lastGather:0,
- mission:{type:"farm",target:2,progress:0,reward:80}
+ missions:[]
 };
 
 const eras = [
@@ -297,14 +296,71 @@ const eras = [
  "AI文明"
 ];
 
-const missionNames = {
- food:"食料を集める",
- wood:"木材を集める",
- stone:"石材を集める",
- farm:"農場を強化する",
- lumber:"伐採所を強化する",
- quarry:"採石場を強化する"
-};
+const missionPool = [
+ {
+  id:"gather_food",
+  title:"食料を100集める",
+  type:"resource",
+  key:"food",
+  target:100,
+  rewardText:"食料 +120",
+  reward:()=>{state.food+=120;}
+ },
+ {
+  id:"gather_wood",
+  title:"木材を80集める",
+  type:"resource",
+  key:"wood",
+  target:80,
+  rewardText:"木材 +100",
+  reward:()=>{state.wood+=100;}
+ },
+ {
+  id:"gather_stone",
+  title:"石材を50集める",
+  type:"resource",
+  key:"stone",
+  target:50,
+  rewardText:"石材 +80",
+  reward:()=>{state.stone+=80;}
+ },
+ {
+  id:"farm_lv3",
+  title:"農場をLv.3にする",
+  type:"level",
+  key:"farms",
+  target:3,
+  rewardText:"永久倍率 +0.1",
+  reward:()=>{state.bonus+=0.1;}
+ },
+ {
+  id:"lumber_lv3",
+  title:"伐採所をLv.3にする",
+  type:"level",
+  key:"lumber",
+  target:3,
+  rewardText:"木材 +200",
+  reward:()=>{state.wood+=200;}
+ },
+ {
+  id:"quarry_lv2",
+  title:"採石場をLv.2にする",
+  type:"level",
+  key:"quarry",
+  target:2,
+  rewardText:"石材 +150",
+  reward:()=>{state.stone+=150;}
+ },
+ {
+  id:"evolve_once",
+  title:"文明を1回進化させる",
+  type:"era",
+  key:"era",
+  target:1,
+  rewardText:"全資源 +150",
+  reward:()=>{state.food+=150;state.wood+=150;state.stone+=150;}
+ }
+];
 
 function $(id){
  return document.getElementById(id);
@@ -319,6 +375,16 @@ function format(n){
 
 function logAdd(text){
  $("log").innerHTML = text + "<br>" + $("log").innerHTML;
+}
+
+function showPopup(x,y,text){
+ const el=document.createElement("div");
+ el.className="popup";
+ el.textContent=text;
+ el.style.left=x+"px";
+ el.style.top=y+"px";
+ document.body.appendChild(el);
+ setTimeout(()=>el.remove(),800);
 }
 
 function flash(){
@@ -368,40 +434,80 @@ function getProgress(){
  return Math.floor(((a+b+d)/3)*100);
 }
 
-function newMission(){
- const types = ["food","wood","stone","farm","lumber","quarry"];
- const type = types[Math.floor(Math.random()*types.length)];
-
- let target = 100 + state.rebirth * 60;
- if(type === "farm" || type === "lumber" || type === "quarry"){
-  target = 2 + state.rebirth;
- }
-
- state.mission = {
-  type,
-  target,
+function setupMissions(){
+ if(state.missions && state.missions.length > 0) return;
+ state.missions = missionPool.slice(0,3).map(m=>({
+  ...m,
   progress:0,
-  reward:80 + state.rebirth * 40
+  completed:false
+ }));
+}
+
+function addMissionProgress(type,key,value){
+ state.missions.forEach(m=>{
+  if(m.completed) return;
+
+  if(m.type==="resource" && type==="resource" && m.key===key){
+   m.progress += value;
+  }
+
+  if(m.type==="level"){
+   m.progress = state[m.key];
+  }
+
+  if(m.type==="era"){
+   m.progress = state.era;
+  }
+
+  if(m.progress >= m.target){
+   m.completed = true;
+   m.reward();
+   logAdd(`🎉 ミッション達成：${m.title} / 報酬：${m.rewardText}`);
+   replaceMission(m.id);
+   flash();
+  }
+ });
+}
+
+function replaceMission(oldId){
+ const currentIds = state.missions.map(m=>m.id);
+ const candidates = missionPool.filter(m=>!currentIds.includes(m.id) && m.id!==oldId);
+
+ const nextBase = candidates.length > 0
+  ? candidates[Math.floor(Math.random()*candidates.length)]
+  : missionPool[Math.floor(Math.random()*missionPool.length)];
+
+ const index = state.missions.findIndex(m=>m.id===oldId);
+
+ state.missions[index] = {
+  ...nextBase,
+  progress:0,
+  completed:false
  };
 }
 
-function addMissionProgress(type, value){
- if(state.mission.type !== type) return;
-
- state.mission.progress += value;
-
- if(state.mission.progress >= state.mission.target){
-  state.food += state.mission.reward;
-  state.wood += Math.floor(state.mission.reward * 0.7);
-  state.stone += Math.floor(state.mission.reward * 0.4);
-  logAdd("🎉 ミッション達成！資源ボーナス獲得！");
-  newMission();
- }
+function gain(type,value){
+ state[type]+=value;
+ addMissionProgress("resource",type,value);
 }
 
-function gain(type, value){
- state[type] += value;
- addMissionProgress(type, value);
+function renderMissions(){
+ $("missionArea").innerHTML = "";
+
+ state.missions.forEach(m=>{
+  const progress = Math.min(m.progress,m.target);
+  const percent = Math.floor((progress / m.target) * 100);
+
+  const div = document.createElement("div");
+  div.className = "mission-card";
+  div.innerHTML = `
+   <div class="mission-title">${m.title}</div>
+   <div class="progress"><div class="bar" style="width:${percent}%"></div></div>
+   <div>${format(progress)} / ${format(m.target)}（${percent}%）</div>
+   <div class="mission-reward">報酬：${m.rewardText}</div>
+  `;
+  $("missionArea").appendChild(div);
+ });
 }
 
 function update(){
@@ -446,12 +552,13 @@ function update(){
   state.stone < cost.stone ||
   state.era >= eras.length - 1;
 
+ if(!$("evolve").disabled){
+  $("evolve").classList.add("blink");
+ }else{
+  $("evolve").classList.remove("blink");
+ }
+
  $("rebirth").disabled = state.era < 2;
-
- $("mission").textContent =
-  `${missionNames[state.mission.type]}：${format(state.mission.progress)} / ${format(state.mission.target)}`;
-
- $("combo").textContent = `コンボ ${state.combo}`;
 
  if(state.boostTime > 0){
   $("reward").textContent = `🔥 ブースト中：残り ${Math.ceil(state.boostTime)}秒`;
@@ -461,32 +568,35 @@ function update(){
   $("reward").disabled = false;
  }
 
+ renderMissions();
  updateAI();
 }
 
 function updateAI(){
  if(state.era >= eras.length - 1){
-  $("ai").textContent = "AI文明に到達しました。ここからは転生で永久倍率を伸ばす段階です。";
+  $("ai").textContent = "AI文明に到達しました。転生で永久倍率を伸ばす段階です。";
  }else if(state.farms === 0){
-  $("ai").textContent = "最初は農場が最優先です。食料の自動生産を作ると一気に安定します。";
+  $("ai").textContent = "最初は農場が最優先です。食料の自動生産を作りましょう。";
  }else if(state.lumber === 0){
-  $("ai").textContent = "次は伐採所です。木材が伸びると施設強化が楽になります。";
+  $("ai").textContent = "次は伐採所です。木材を増やすと強化が楽になります。";
  }else if(state.quarry === 0){
   $("ai").textContent = "採石場を作ると進化に必要な石材が安定します。";
  }else if(getProgress() >= 80){
-  $("ai").textContent = "進化目前です。足りない資源だけを狙って集めましょう。";
+  $("ai").textContent = "進化目前です。足りない資源だけを狙いましょう。";
  }else{
-  $("ai").textContent = "採集→施設強化→文明進化→転生。このループで永久倍率を伸ばしましょう。";
+  $("ai").textContent = "ミッションを達成しながら施設を強化すると、効率よく進めます。";
  }
 }
 
-$("gather").onclick = () => {
+$("gather").onclick = (e) => {
  const now = Date.now();
+
  if(now - state.lastGather < 600){
   state.combo = Math.min(state.combo + 1, 30);
  }else{
   state.combo = 1;
  }
+
  state.lastGather = now;
 
  const comboBonus = 1 + state.combo * 0.02;
@@ -496,6 +606,8 @@ $("gather").onclick = () => {
  gain("wood",2 * total);
  gain("stone",1 * total);
 
+ if(navigator.vibrate) navigator.vibrate(10);
+ showPopup(e.clientX,e.clientY,`+${format(3*total)} 食料`);
  logAdd(`+${format(3*total)}食料 / +${format(2*total)}木材 / +${format(1*total)}石材`);
  flash();
  update();
@@ -507,8 +619,8 @@ $("farm").onclick = () => {
 
  state.food -= cost;
  state.farms++;
- addMissionProgress("farm",1);
  logAdd(`🌾 農場 Lv.${state.farms} に強化`);
+ addMissionProgress("level","farms",1);
  update();
 };
 
@@ -518,8 +630,8 @@ $("lumber").onclick = () => {
 
  state.wood -= cost;
  state.lumber++;
- addMissionProgress("lumber",1);
  logAdd(`🪵 伐採所 Lv.${state.lumber} に強化`);
+ addMissionProgress("level","lumber",1);
  update();
 };
 
@@ -529,8 +641,8 @@ $("quarry").onclick = () => {
 
  state.stone -= cost;
  state.quarry++;
- addMissionProgress("quarry",1);
  logAdd(`⛏ 採石場 Lv.${state.quarry} に強化`);
+ addMissionProgress("level","quarry",1);
  update();
 };
 
@@ -546,6 +658,7 @@ $("evolve").onclick = () => {
  state.population += 5 + state.era * 2;
 
  logAdd(`✨ 文明が「${eras[state.era]}」へ進化！`);
+ addMissionProgress("era","era",1);
  flash();
  update();
 };
@@ -567,10 +680,11 @@ $("rebirth").onclick = () => {
  state.lumber = 0;
  state.quarry = 0;
  state.era = 0;
- state.combo = 0;
  state.boostTime = 0;
+ state.combo = 0;
+ state.missions = [];
 
- newMission();
+ setupMissions();
  logAdd(`⚡ 転生成功！永久倍率 x${state.bonus.toFixed(1)}`);
  update();
 };
@@ -589,6 +703,7 @@ $("save").onclick = () => {
 $("reset").onclick = () => {
  const ok = confirm("本当にリセットしますか？");
  if(!ok) return;
+
  localStorage.removeItem(SAVE_KEY);
  location.reload();
 };
@@ -606,6 +721,11 @@ function loop(){
   state.boostTime -= 0.1;
   if(state.boostTime < 0) state.boostTime = 0;
  }
+
+ addMissionProgress("level","farms",0);
+ addMissionProgress("level","lumber",0);
+ addMissionProgress("level","quarry",0);
+ addMissionProgress("era","era",0);
 
  update();
 }
@@ -626,7 +746,7 @@ function load(){
 }
 
 load();
-if(!state.mission) newMission();
+setupMissions();
 update();
 
 setInterval(loop,100);
